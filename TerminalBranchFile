@@ -1,0 +1,446 @@
+using System.Collections;
+using System.Collections.Generic;
+using DoubleTechniStyle;
+using JetBrains.Annotations;
+using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
+using UnityEngine.UI;
+using UnityEngine.UIElements;
+using static UnityEngine.Rendering.DebugUI;
+using Button = UnityEngine.UI.Button;
+using Image = UnityEngine.UI.Image;
+
+public class TabController : MonoBehaviour
+{
+    // Start is called once before the first execution of Update after the MonoBehaviour is created
+
+    public TMP_Text[] menuText;
+    public GameObject[] pages;
+    public GameObject[] buttons;
+
+    public UseItem item;
+
+    public GameObject itemDescriptionPrefab; 
+    public Transform itemDescriptionPanel;
+
+    public GameObject usePanel;
+    public GameObject useButton;
+
+    public GameObject[] pausePanels;
+
+    [SerializeField] private GameObject arrow;
+    [SerializeField] private GameObject menu;
+
+    public bool canNavigate = false;
+
+
+
+    private void Start()
+    {
+        foreach (var text in menuText)
+        {
+            text.color = Color.grey;
+        }
+
+        foreach (var page in pages)
+        {
+            page.SetActive(false);
+        }
+
+       // menuText[0].color = Color.magenta;
+        
+    }
+
+    void Update()
+    {
+        //Debug.Log(canNavigate);
+        if (canNavigate)
+        {
+            NavigatePages();
+        }
+
+        if (!canNavigate)
+        {
+            foreach (var text in menuText)
+            {
+                text.color = Color.grey;
+            }
+        }
+
+        //if (EventSystem.current.currentSelectedGameObject == null)
+        //    Debug.Log("NO SELECTED OBJECT");
+        //else
+        //    Debug.Log("Selected: " + EventSystem.current.currentSelectedGameObject);
+
+
+
+    }
+
+    public void OnArrow()
+    {
+        Debug.Log("in on arrow");
+        foreach (var text in menuText)
+        {
+            text.color = Color.grey;
+        }
+        canNavigate = false;
+        
+    }
+    
+    public void EnterTopMenu() //Press Submit on Arrow
+    {
+        Debug.Log("Entering");
+        
+        //Eventually play some kind of animation here instead of highlight
+        foreach (var panel in pausePanels)
+        {
+            panel.SetActive(false);
+        }
+
+        foreach (var text in menuText)
+        {
+            text.color = Color.white;
+        }
+
+        EventSystem.current.SetSelectedGameObject(buttons[0]);
+        pages[0].SetActive(true);
+        canNavigate = true;
+
+    }
+
+    public void ExitTopMenu() //Press Cancel on Item, Equip, Map or Options
+    {
+        EventSystem.current.SetSelectedGameObject(arrow);
+
+        foreach (var panel in pausePanels)
+        {
+            panel.SetActive(true);
+        }
+
+        foreach (var page in pages)
+        {
+            page.SetActive(false);
+        }
+
+        foreach (var text in menuText)
+        {
+            text.color = Color.grey;
+        }
+
+        canNavigate = false;
+    }
+
+    public void CloseEverything() //Press Cancel on Arrow
+    {
+        menu.SetActive(false);
+        PauseController.SetPause(false);
+
+
+    }
+
+    public void NavigatePages() //Grey out page text
+    {
+        for (int i = 0; i < pages.Length; i++)
+        {
+
+            if (EventSystem.current.currentSelectedGameObject == buttons[i])
+            {
+
+                menuText[i].color = Color.magenta;
+                pages[i].SetActive(true);
+
+                //Set everything in those pages to grey
+
+                if (buttons[0]) //if this sets everything turn it back to white otherwise
+                {
+                    foreach (Transform slotTransform in UseInventoryController.Instance.inventoryPanel.transform)
+                    {
+
+                        Slot slot = slotTransform.GetComponent<Slot>();
+
+                        if (slot.currentItem != null)
+                        {
+                            Transform theSlotTransform = slot.transform;
+
+                            TMP_Text item = theSlotTransform.GetComponentInChildren<TMP_Text>();
+
+                            //Transform itemTransform = slotTransform.GetChild(0);   //Getting the Item Transform
+
+                            //GameObject itemGO = itemTransform.gameObject;
+
+                            //TMP_Text item = itemGO.GetComponent<TMP_Text>(); //Reference to Item Transform
+
+
+                            //if (item == null) Debug.Log("itemtextsnull");
+                            item.color = Color.grey;
+                        }
+
+                    }
+                }
+
+
+            }
+
+            else
+            {
+                menuText[i].color = Color.white;
+                pages[i].SetActive(false);
+
+
+            }
+
+   }
+
+}
+  
+        
+    public void OpenThePage(int tabNo) //Press Z (Submit on Page). Also, Appropriately adjust EventSystem currentSelectedGameObject Grey out top color text - dulled purple or whatever
+    {
+
+        if (tabNo == 0 && UseInventoryController.Instance.itemCounterIndex == 0)
+        {
+            //Do Nothing
+            ;
+        }
+
+        else
+        {
+            canNavigate = false;
+            Debug.Log("Opening page");
+            for (int i = 0; i < pages.Length; i++)
+            {
+
+                pages[i].SetActive(false);
+
+            }
+
+            pages[tabNo].SetActive(true);
+            menuText[tabNo].color = Color.magenta;
+
+            if (tabNo == 0 && UseInventoryController.Instance.itemCounterIndex != 0)
+            {
+                foreach (Transform slotTransform in UseInventoryController.Instance.inventoryPanel.transform)
+                {
+                    Slot newSlot = slotTransform.GetComponent<Slot>();
+
+                    if (newSlot.currentItem != null)
+                    {
+                        
+                        Transform theSlotTransform = newSlot.transform;
+
+                        TMP_Text itemText = theSlotTransform.GetComponentInChildren<TMP_Text>();
+
+                        itemText.color = Color.white;
+                    }
+
+                }
+
+                Transform firstSlotTransform = UseInventoryController.Instance.inventoryPanel.transform.GetChild(0); //Reference to Slot Transform
+                Slot slot = firstSlotTransform.GetComponent<Slot>(); //Getting the Slot
+                                                                     // Debug.Log(slot);
+
+                if (slot.currentItem == null)
+                {
+                    Debug.Log("No items in inventory");
+                    return;
+
+                }
+
+                if (slot.currentItem != null)
+                {
+                    Debug.Log("Item(s) in inventory");
+
+                }
+                Transform item = firstSlotTransform.GetChild(0); //Reference to Item Transform
+
+                GameObject itemGO = item.gameObject; //Getting the Item
+
+                EventSystem.current.SetSelectedGameObject(itemGO);
+            }
+
+        }
+       
+
+        
+
+    }
+
+   
+
+    //Use this to immediately open a page (if needed - not sure where)
+    //public void MoveThroughTabs(int tabNo)
+    //{
+
+    //    for (int i = 0; i < pages.Length; i++)
+    //    {
+
+    //        pages[i].SetActive(false);
+    //        menuText[i].color = Color.white;
+
+
+    //    }
+    //    pages[tabNo].SetActive(true);
+    //    menuText[tabNo].color = Color.magenta;
+
+    //    EventSystem.current.SetSelectedGameObject(null);
+
+    //    EventSystem.current.SetSelectedGameObject(buttons[tabNo]);
+    //    Debug.Log("Selected: " + EventSystem.current.currentSelectedGameObject);
+
+
+    //}
+
+
+    //}
+    //public void ClosePage(int tabNo)
+    //{
+
+    //    pages[tabNo].SetActive(false);
+
+    //    foreach (var panel in pausePanels)
+    //    {
+    //        panel.SetActive(true);
+    //    }
+        
+    //}
+
+    //public void OpenPage(int tabNo)
+    //{
+
+    //    foreach (var panel in pausePanels)
+    //    {
+    //        panel.SetActive(false);
+    //    }
+    //    menuText[tabNo].color = Color.red; //This should be the dulled color
+    //    pages[tabNo].SetActive(true);
+    //    Debug.Log("setting page active");
+
+        //if (tabNo == 0)
+        //{
+
+
+        //    Transform firstSlotTransform = UseInventoryController.Instance.inventoryPanel.transform.GetChild(0);
+        //    Slot slot = firstSlotTransform.GetComponent<Slot>();
+        //    // Debug.Log(slot);
+
+        //    if (slot.currentItem == null)
+        //    {
+        //        Debug.Log("No items in inventory");
+        //        return;
+
+        //    }
+
+        //    if (slot.currentItem != null)
+        //    {
+        //        Debug.Log("Item(s) in inventory");
+        //        //pages[0].SetActive(true);
+        //    }
+        //    Transform item = firstSlotTransform.GetChild(0);
+
+        //    TMP_Text itemText = item.GetComponent<TMP_Text>();
+
+        //    if (itemText == null)
+        //    {
+        //        Debug.LogError("Item has no TMP_Text!");
+        //        return;
+        //    }
+
+        //    GameObject itemGO = itemText.gameObject;
+
+        //    EventSystem.current.SetSelectedGameObject(itemGO);
+
+        //    //Needs to update for each item, not just show the description of the first one. 
+
+        //    UseItem itemName = slot.item; //Reference to the Item
+
+        //    GameObject itemDescription = Instantiate(itemDescriptionPrefab, itemDescriptionPanel); //Instantiate the text
+        //    TMP_Text itemDescText = itemDescription.GetComponent<TMP_Text>(); //Get the text of the itemDescription
+
+
+        //    //itemDescription.GetComponent<RectTransform>().anchoredPosition = Vector2.zero; //Right spot
+        //    itemDescText.text = $"{itemName.itemDescription}"; //Set the description
+        //}
+
+     }
+
+   
+
+    //public void GiveItem()
+    //{
+
+    //}
+
+    //public void DropItem()
+    //{
+    //    GameObject itemDescription = Instantiate(itemDescriptionPrefab, itemDescriptionPanel); //Instantiate the text
+    //    TMP_Text itemDescText = itemDescription.GetComponent<TMP_Text>(); //Get the text of the itemDescription
+
+
+        //itemDescription.GetComponent<RectTransform>().anchoredPosition = Vector2.zero; //Right spot
+        //itemDescText.text = $"{itemName.itemDescription}"; //Set the description
+   
+
+   
+
+
+
+
+
+
+
+
+
+        
+
+        //for (int i = 0; i < pages.Length; i++)
+        //{
+
+        //    pages[i].SetActive(false);
+        //    menuText[i].color = Color.white;
+
+
+        //}
+
+        //fix this so you can use the input system to navigate between pages
+
+
+        //void Start()
+        //{
+        //    ActivateTab(0);
+        //    //  EventSystem.current.SetSelectedGameObject(buttons[0]);
+
+
+        //}
+        //public void MoveThroughTabs()
+        //{
+        //    EventSystem.current.SetSelectedGameObject(null);
+        //    EventSystem.current.SetSelectedGameObject(buttons[0]);
+        //}
+
+        //public void ActivateTab(int tabNo)
+        //{
+
+
+
+
+
+
+
+        //  //  EventSystem.current.SetSelectedGameObject(buttons[tabNo]);
+
+
+
+        //}
+
+
+
+   
+
+
+
+
+
+
